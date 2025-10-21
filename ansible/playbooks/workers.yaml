@@ -1,0 +1,15 @@
+---
+- hosts: workers
+  become: true
+  roles: 
+    - commom 
+
+  tasks:
+    - name: Get join command from control-plane
+      delegate_to: control-plane
+      command: kubeadm token create --print-join-command
+      register: join_command
+      run_once:  true
+
+    - name: Join worker nodes to cluster
+      command: "{{ join_command.stdout }}"

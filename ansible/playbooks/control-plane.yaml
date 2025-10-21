@@ -1,0 +1,23 @@
+---
+- hosts: control-plane
+  become: true
+  roles:
+    - commom
+
+  tasks:
+    - name: initialize control plane
+      command: kubeadm init --pod-network-cidr=10.244.0.0/16
+      args:
+        creates: /etc/kubernetes/admin.conf
+    
+    - name: Configure kubectl for vagrant user
+      become_user: vagrant
+      shell: |
+        mkdir -p $HOME/.kube
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+    - name: Deploy Flannel network
+      become_user: vagrant
+      shell: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml # TODO provide a better way to apply flannel later
+      
