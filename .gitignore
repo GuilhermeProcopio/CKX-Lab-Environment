@@ -46,3 +46,6 @@ terraform.rc
 
 ### Vagrant Patch ###
 *.box
+
+### VSCODE ###
+*.vscode
