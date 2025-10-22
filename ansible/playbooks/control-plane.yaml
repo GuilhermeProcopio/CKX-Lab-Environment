@@ -2,7 +2,7 @@
 - hosts: control-plane
   become: true
   roles:
-    - commom
+    - common
 
   tasks:
     - name: initialize control plane
