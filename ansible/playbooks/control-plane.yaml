@@ -1,8 +1,8 @@
 ---
-- hosts: control-plane
+- hosts: control_plane
   become: true
   roles:
-    - ../roles/common 
+    - ../roles/common
 
   tasks:
     - name: initialize control plane
