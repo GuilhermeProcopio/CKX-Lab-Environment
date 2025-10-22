@@ -2,7 +2,7 @@
 - hosts: workers
   become: true
   roles: 
-    - common
+    - ../roles/common 
 
   tasks:
     - name: Get join command from control-plane
