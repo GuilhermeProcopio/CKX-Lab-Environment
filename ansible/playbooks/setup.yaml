@@ -1,0 +1,80 @@
+---
+- name: Setup all Kubernetes nodes
+  hosts: kubernetes
+  become: yes
+  roles:
+    - commom
+
+- name: Initialize Kubernetes Control Plane
+  hosts: control_plane
+  become: yes
+  tasks:
+    - name: Initialize Kubernetes cluster
+      shell: kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.56.10
+      args:
+        creates: /etc/kubernetes/admin.conf
+
+    - name: Create .kube directory
+      file:
+        path: /home/vagrant/.kube
+        state: directory
+        owner: vagrant
+        group: vagrant
+        mode: '0755'
+
+    - name: Copy admin.conf to user's kube config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/vagrant/.kube/config
+        remote_src: yes
+        owner: vagrant
+        group: vagrant
+        mode: '0644'
+
+    - name: Install Flannel CNI
+      become_user: vagrant
+      shell: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+      args:
+        creates: /home/vagrant/.kube/flannel-installed
+
+    - name: Mark Flannel as installed
+      file:
+        path: /home/vagrant/.kube/flannel-installed
+        state: touch
+        owner: vagrant
+        group: vagrant
+
+    - name: Get join command
+      shell: kubeadm token create --print-join-command
+      register: join_command_raw
+
+    - name: Set join command as fact
+      set_fact:
+        join_command: "{{ join_command_raw.stdout }}"
+
+    - name: Save join command to file
+      copy:
+        content: "{{ join_command }}"
+        dest: /tmp/join-command.sh
+        mode: '0755'
+
+    - name: Fetch join command to local machine
+      fetch:
+        src: /tmp/join-command.sh
+        dest: /tmp/join-command.sh
+        flat: yes
+
+- name: Join Worker Nodes to Cluster
+  hosts: workers
+  become: yes
+  tasks:
+    - name: Copy join command to worker
+      copy:
+        src: /tmp/join-command.sh
+        dest: /tmp/join-command.sh
+        mode: '0755'
+
+    - name: Join cluster
+      shell: bash /tmp/join-command.sh
+      args:
+        creates: /etc/kubernetes/kubelet.conf
