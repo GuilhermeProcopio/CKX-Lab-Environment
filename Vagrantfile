@@ -1,27 +1,24 @@
 Vagrant.configure("2") do |config| 
-    config.vm.box = "ubuntu/jammy64"
+    config.vm.box = "generic/ubuntu2204"
     config.vm.synced_folder ".", "/vagrant", disabled: true
 
     # for HA 2 control-plane, but its a lab environment, 
     # so 1 control-plane and 2 data-plane
   NODES = {
-    "control-plane" => "192.168.56.10",
-    "worker1" => "192.168.56.11",
-    "worker2" => "192.168.56.12"
+    "control-plane" => { :memory => 3072, :cpus => 2 },
+    "worker1"       => { :memory => 2048, :cpus => 2 },
+    "worker2"       => { :memory => 2048, :cpus => 2 }
   }
 
-NODES.each do |name, ip|
+  NODES.each do |name, opts|
     config.vm.define name do |node|
       node.vm.hostname = name
-      node.vm.network "private_network", ip: ip
-      node.vm.provider "virtualbox" do |virtualbox|
-        virtualbox.memory = name == "control-plane" ? 2048 : 1024
-        virtualbox.cpus = 2
+      node.vm.provider :libvirt do |v|
+        v.memory = opts[:memory]
+        v.cpus = opts[:cpus]
+        v.nested = true
       end
-      node.vm.provision "shell", inline: <<-SHELL
-        apt-get update -y
-        apt-get install -y python3 python3-apt
-      SHELL
+      node.vm.network "private_network", ip: "192.168.56.#{rand(100..250)}"
     end
   end
 end
