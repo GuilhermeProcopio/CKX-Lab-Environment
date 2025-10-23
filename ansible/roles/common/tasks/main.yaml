@@ -40,29 +40,54 @@
     enabled: true
   become: true
 
-- name: Add Kubernetes apt repo
+- name: Remove legacy Kubernetes apt repository file if present
+  file:
+    path: /etc/apt/sources.list.d/kubernetes.list
+    state: absent
+  become: true
+
+- name: Ensure apt keyrings directory exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Add Kubernetes apt repository signing key (pkgs.k8s.io v1.34)
   shell: |
-    curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   args:
-    creates: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  become: true
+
+- name: Add Kubernetes apt repository (v1.34)
+  copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /'
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
   become: true
 
 - name: Install kubelet, kubeadm, kubectl
-  apt: 
+  apt:
     name:
       - kubelet
-      - kubectl
       - kubeadm
+      - kubectl
     state: present
-    update_cache: yes
+    update_cache: no
   become: true
 
-- name: Hold kube packages
-  apt: 
-    name: 
-      - kubelet
-      - kubeadm
-      - kubectl
-    state: held
+- name: Enable kubelet service
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
   become: true

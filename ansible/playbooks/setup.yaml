@@ -3,7 +3,7 @@
   hosts: kubernetes
   become: yes
   roles:
-    - commom
+    - ../roles/common
 
 - name: Initialize Kubernetes Control Plane
   hosts: control_plane
@@ -22,7 +22,7 @@
         group: vagrant
         mode: '0755'
 
-    - name: Copy admin.conf to user's kube config
+    - name: Copy admin.conf to user's s (or delegates the crkube config
       copy:
         src: /etc/kubernetes/admin.conf
         dest: /home/vagrant/.kube/config
@@ -68,6 +68,14 @@
   hosts: workers
   become: yes
   tasks:
+    - name: Enable IP forwarding on worker nodes
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        state: present
+        reload: yes
+      become: true
+
     - name: Copy join command to worker
       copy:
         src: /tmp/join-command.sh
@@ -75,6 +83,6 @@
         mode: '0755'
 
     - name: Join cluster
-      shell: bash /tmp/join-command.sh
+      shell: bash /tmp/join-command.sh --ignore-preflight-errors=FileContent--proc-sys-net-ipv4-ip_forward
       args:
         creates: /etc/kubernetes/kubelet.conf

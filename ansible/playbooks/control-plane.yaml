@@ -5,11 +5,19 @@
     - ../roles/common
 
   tasks:
+    - name: Enable IP forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        state: present
+        reload: yes
+      become: true
+
     - name: initialize control plane
-      command: kubeadm init --pod-network-cidr=10.244.0.0/16
+      command: kubeadm init --pod-network-cidr "10.244.0.0/16" --apiserver-advertise-address=192.168.56.10
       args:
         creates: /etc/kubernetes/admin.conf
-    
+
     - name: Configure kubectl for vagrant user
       become_user: vagrant
       shell: |
