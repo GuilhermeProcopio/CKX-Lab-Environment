@@ -20,3 +20,15 @@ This project automates the creation of a lightweight Kubernetes cluster with:
 3. **Install the Vagrant libvirt plugin**
 4. **Install Ansible**
 
+### setuping the cluster 
+
+```bash
+ansible-playbook -i inventory. ini {path to playbooks}
+```
+
+after setup the cluster, use ```vagrant ssh control-plane``` to access or in your host:
+```bash
+    export KUBECONFIG=~/path/to/copied/kubeconfig
+    kubectl get nodes
+```
+
